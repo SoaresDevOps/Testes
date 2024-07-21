@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="result">
+        <div class="info">
+            <div id="resultado"></div>
+        </div>
+        <div class="ultimas-senhas" id="ultimasSenhas">
+            <!-- As últimas senhas chamadas aparecerão aqui -->
+        </div>
+        <!-- Elemento de áudio para reprodução -->
+        <audio id="audio" src="som_senha.mp3"></audio>
+    </div>
+
+    <script>
+        const cores = {
+            "Jane": "#ff0000",
+            "Luana": "#0000ff",
+            "Osmair": "#008000",
+            "Amanda": "#ffa500",
+            "Arthur": "#800080",
+            "Andreia": "#ff00ff"
+        };
+
+        const socket = new WebSocket('ws://' + window.location.hostname + ':3000');
+
+        socket.addEventListener('message', function (event) {
+            console.log('Mensagem recebida do servidor', event.data);
+
+            const dados = JSON.parse(event.data);
+
+            const resultadoDiv = document.getElementById('resultado');
+            resultadoDiv.innerHTML = 
+                `<div class="text">
+                    <div>
+                        <p class="sala" style="font-size: 74px">Sala: ${dados.sala}</p>
+                        <p style="font-size: 80px;">Senha: N° ${dados.senha}</p>
+                        <p class="dr" style="color: ${cores[dados.dr]}; font-size: 80px">Dr(a): ${dados.dr}</p>
+                    </div>
+                </div>`;
+
+            let ultimasSenhas = JSON.parse(localStorage.getItem('ultimasSenhas')) || [];
+            ultimasSenhas.push({ senha: dados.senha, dr: dados.dr });
+            if (ultimasSenhas.length > 5) {
+                ultimasSenhas.shift();
+            }
+
+            localStorage.setItem('ultimasSenhas', JSON.stringify(ultimasSenhas));
+
+            const ultimasSenhasDiv = document.getElementById('ultimasSenhas');
+            ultimasSenhasDiv.innerHTML = '';
+            ultimasSenhas.forEach(item => {
+                const senhaItem = document.createElement('div');
+                senhaItem.classList.add('senha-item');
+                senhaItem.textContent = `Senha N° ${item.senha} - Dr(a): ${item.dr}`;
+                ultimasSenhasDiv.appendChild(senhaItem);
+            });
+
+            const audio = document.getElementById('audio');
+            audio.play();
+        });
+
+        function limparResultadoSeNecessário() {
+            const agora = new Date();
+            const hora = agora.getHours();
+            const minutos = agora.getMinutes();
+
+            // Verifica se é exatamente 00:00
+            if (hora === 16 && minutos === 37) {
+                // Limpa o conteúdo do resultado
+                document.getElementById('resultado').innerHTML = '';
+                
+                // Limpa as últimas senhas
+                document.getElementById('ultimasSenhas').innerHTML = '';
+                
+                // Limpa o armazenamento local
+                localStorage.removeItem('ultimasSenhas');
+                localStorage.removeItem('dadosFormulario');
+            }
+        }
+
+        // Verifica a hora quando a página é carregada
+        window.onload = function() {
+            limparResultadoSeNecessário();
+            
+            // Também pode ser útil verificar a hora em intervalos regulares
+            setInterval(limparResultadoSeNecessário, 60000); // Verifica a cada minuto
+        };
+    </script>
+</body>
+</html>
